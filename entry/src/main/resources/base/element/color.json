@@ -1,0 +1,32 @@
+{
+  "color": [
+    {
+      "name": "start_window_background",
+      "value": "#FFFFFF"
+    },
+    {
+      "name": "card_bg",
+      "value": "#FFFFFF"
+    },
+    {
+      "name": "card_title",
+      "value": "#1B1B1B"
+    },
+    {
+      "name": "card_text",
+      "value": "#1B1B1B"
+    },
+    {
+      "name": "card_sub",
+      "value": "#8A9099"
+    },
+    {
+      "name": "card_accent",
+      "value": "#1F86C7"
+    },
+    {
+      "name": "card_divider",
+      "value": "#E4E8EE"
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "南医大口袋入口模块"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "南医大口袋"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "南医大口袋"
+    },
+    {
+      "name": "form_desc",
+      "value": "今明两天课程"
+    },
+    {
+      "name": "form_label",
+      "value": "今明课程"
+    }
+  ]
+}

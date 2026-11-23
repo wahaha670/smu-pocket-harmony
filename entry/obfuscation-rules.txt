@@ -1,0 +1,35 @@
+# 混淆规则
+#
+# ## 为什么这里保持保守（重要）
+#
+# 本应用把数据以 **JSON 形式落盘**，读回时按**固定的字符串字段名**取值：
+#
+# - `cache_snapshot.json` —— 课表/成绩/考试缓存（离线可用的基础）
+# - `widget_data.json`   —— 桌面卡片数据（卡片与 App 是两个进程，只靠这个文件通信）
+#
+# 一旦开启属性名混淆，写入端 `JSON.stringify` 产出的键名会被改写，
+# 而读取端的 `root['courses']` 这类**字符串字面量不会被改写** ——
+# 两边对不上，表现为：
+#   「App 重装后缓存读不出来、桌面卡片永远显示没有课」，
+# 而且**编译期毫无警告**，极难排查。
+#
+# 同理，桌面卡片是系统按路径加载的（`form_config.json` 的 `src` 指向
+# `ets/widget/pages/WidgetCard.ets`），开启文件名混淆有找不到入口的风险。
+#
+# ## 结论
+#
+# 这是个开源的个人自用应用，混淆带来的体积收益很小，
+# 但一旦出错就是「数据静默丢失」。所以这里**不开属性名/文件名/导出名混淆**，
+# 只保留最基础的处理。
+#
+# 如果将来确实要开启属性名混淆，必须先用 `-keep-property-name`
+# 把上面两个 JSON 的所有字段名列全 —— 漏一个就会坏一个功能。
+
+# 移除 console.* 输出
+-remove-log
+
+# 以下选项**刻意不开启**，原因见上：
+# -enable-property-obfuscation
+# -enable-toplevel-obfuscation
+# -enable-filename-obfuscation
+# -enable-export-obfuscation

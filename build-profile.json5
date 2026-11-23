@@ -1,0 +1,64 @@
+{
+  /*
+   * ⚠️ 本文件当前含**个人签名配置**（本机装机用）。
+   *
+   * 公开发布前必须先换回不含签名的版本：
+   *   Copy-Item build-profile.no-signing.json5.bak build-profile.json5 -Force
+   *
+   * 原因：签名配置里有个人绝对路径与口令哈希，且调试证书绑定开发者本人
+   * 设备 UDID，对别人无用。
+   */
+  app: {
+    signingConfigs: [
+      {
+        name: 'default',
+        type: 'HarmonyOS',
+        material: {
+          certpath: 'C:\\Users\\dften\\.ohos\\config\\default_smu-pocket_sU0E8vdgf3r10D6WAHbmNqVsauMKKt11DnnFFcaoLE=.cer',
+          keyAlias: 'debugKey',
+          keyPassword: '0000001bf9f9223abded25c38d84a5be2ec0ff6f12fc66cff7b67e6e1d92cb70cd27260caa11f66cdc4a4d',
+          profile: 'C:\\Users\\dften\\.ohos\\config\\default_smu-pocket_sU0E8vdgf3r10D6WAHbmNqVsauMKKt11DnnFFcaoLE=.p7b',
+          signAlg: 'SHA256withECDSA',
+          storeFile: 'C:\\Users\\dften\\.ohos\\config\\default_smu-pocket_sU0E8vdgf3r10D6WAHbmNqVsauMKKt11DnnFFcaoLE=.p12',
+          storePassword: '0000001bf9f9223abded25c38d84a5be2ec0ff6f12fc66cff7b67e6e1d92cb70cd27260caa11f66cdc4a4d',
+        },
+      },
+    ],
+    products: [
+      {
+        name: 'default',
+        signingConfig: 'default',
+        compatibleSdkVersion: '5.0.0(12)',
+        runtimeOS: 'HarmonyOS',
+        buildOption: {
+          strictMode: {
+            caseSensitiveCheck: true,
+            useNormalizedOHMUrl: true,
+          },
+        },
+      },
+    ],
+    buildModeSet: [
+      {
+        name: 'debug',
+      },
+      {
+        name: 'release',
+      },
+    ],
+  },
+  modules: [
+    {
+      name: 'entry',
+      srcPath: './entry',
+      targets: [
+        {
+          name: 'default',
+          applyToProducts: [
+            'default',
+          ],
+        },
+      ],
+    },
+  ],
+}

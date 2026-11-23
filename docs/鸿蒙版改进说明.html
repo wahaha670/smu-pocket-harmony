@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="data:,">
+<title>南医大口袋 · 鸿蒙版移植改进说明</title>
+<style>
+:root{
+  --bg:#10151B;
+  --panel:#161D26;
+  --fg:#F5F7FA;
+  --muted:#8E9AAA;
+  --accent:#2F6BFF;
+  --accent2:#FFB300;
+  --font-heading:"Helvetica Neue", Inter, "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-body:"Helvetica Neue", Inter, "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;background:var(--bg);color:var(--fg);
+  font-family:var(--font-body);overflow:hidden;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+#stage{position:fixed;inset:0}
+.slide-frame{position:fixed;inset:0}
+.slide{
+  position:absolute;inset:0;display:none;flex-direction:column;justify-content:center;
+  padding:clamp(34px,7vw,110px);overflow:hidden;
+}
+.slide::before{
+  content:"";position:absolute;inset:-20%;pointer-events:none;z-index:-1;
+  background:
+    radial-gradient(42% 34% at 82% 18%, rgba(47,107,255,0.22), transparent 70%),
+    radial-gradient(36% 30% at 12% 86%, rgba(255,179,0,0.16), transparent 70%),
+    radial-gradient(70% 60% at 50% 50%, rgba(22,29,38,0.55), transparent 100%);
+}
+.slide.is-active{display:flex}
+body.motion .slide.is-active{animation:slide-in .45s cubic-bezier(.22,.8,.36,1)}
+@keyframes slide-in{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}
+body.motion .bullets li{
+  opacity:0;animation:bullet-in .55s cubic-bezier(.22,.8,.36,1) forwards;
+  animation-delay:calc(var(--i, 0)*90ms + .12s);
+}
+@keyframes bullet-in{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+
+.slide--image,.slide--image-left,.slide--image-right,.slide--chart{padding:0;align-items:center}
+.slide--image .slide-inner,.slide--image-left .slide-inner,.slide--image-right .slide-inner,.slide--chart .slide-inner{width:100%;display:flex;justify-content:center}
+.media-canvas{position:relative;width:min(100vw,177.7778vh);height:min(100vh,56.25vw);container-type:inline-size}
+.media-title,.media-image,.media-body,.media-chart,.media-caption{position:absolute;margin:0;max-width:none;box-sizing:border-box}
+.media-title{font-size:3.54cqw;line-height:1.17;overflow-wrap:anywhere}
+.media-image img{width:100%;height:100%;display:block}
+.media-body{font-size:2.083cqw;line-height:1.45;overflow-wrap:anywhere}
+.media-body p{margin:0 0 1.2em}.media-body ul{margin:0;padding-left:1.1em}.media-body li{margin-bottom:.6em}
+.media-caption{color:var(--muted);font-size:1.4cqw;line-height:1.2}
+.native-chart{width:100%;height:100%;font-family:var(--font-body)}
+.chart-data{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+.brand-logo{position:absolute;right:6.2%;top:1.6%;width:7.1%;height:5.6%;object-fit:contain;pointer-events:none}
+.brand-footer{position:absolute;left:6.4%;bottom:3.4%;max-width:69%;font-size:clamp(10px,1vw,15px);color:var(--muted)}
+body.printing .brand-footer{display:block}
+
+.kicker{
+  color:var(--accent);font-weight:700;letter-spacing:.18em;text-transform:uppercase;
+  font-size:clamp(12px,1.3vw,18px);margin-bottom:22px;
+}
+h1,h2,.statement-title{font-family:var(--font-heading);line-height:1.06;letter-spacing:-.015em;margin:0}
+h1{font-size:clamp(44px,7.4vw,118px);max-width:20ch}
+h2{font-size:clamp(34px,5vw,82px);max-width:20ch}
+.subtitle{
+  color:var(--muted);font-size:clamp(18px,2.3vw,34px);line-height:1.5;
+  max-width:46em;margin-top:28px;
+}
+.meta{
+  color:var(--muted);font-size:clamp(12px,1.2vw,16px);margin-top:48px;
+  letter-spacing:.06em;
+}
+.bullets ul{margin:30px 0 0;padding:0;list-style:none;display:grid;gap:clamp(12px,1.6vw,24px)}
+.bullets li{
+  position:relative;padding-left:clamp(28px,2.6vw,44px);
+  font-size:clamp(20px,2.6vw,40px);line-height:1.35;max-width:24em;
+}
+.bullets li::before{
+  content:"";position:absolute;left:0;top:.58em;width:.5em;height:.5em;
+  background:var(--accent);border-radius:2px;box-shadow:.28em .28em 0 color-mix(in srgb, var(--accent2) 78%, transparent);
+}
+.section .kicker{margin-bottom:10px}
+.section .accent-line{width:min(180px,18vw);height:6px;background:var(--accent);margin:28px 0}
+.statement-title{
+  font-size:clamp(34px,5.4vw,88px);max-width:22ch;font-weight:800;
+  border-left:6px solid var(--accent);padding-left:clamp(22px,3vw,48px);
+}
+.closing{text-align:center;align-items:center}
+.closing h1,.closing .statement-title{font-size:clamp(52px,9vw,148px)}
+.closing .subtitle{color:var(--accent);font-weight:700}
+.cover h1{font-weight:900}
+.quote-mark{
+  font-family:var(--font-heading);font-size:clamp(90px,13vw,210px);line-height:.62;
+  color:var(--accent);margin-bottom:clamp(14px,2vw,30px);
+}
+.quote-text{
+  font-family:var(--font-heading);font-size:clamp(26px,4.2vw,62px);line-height:1.28;
+  font-weight:700;max-width:22ch;margin:0;
+}
+.quote-attr{color:var(--muted);margin-top:clamp(18px,2.6vw,34px);font-size:clamp(15px,1.8vw,26px);letter-spacing:.04em}
+table.deck-table{
+  border-collapse:collapse;margin-top:clamp(20px,3vw,42px);width:100%;max-width:100%;
+  font-size:clamp(14px,1.55vw,23px);
+}
+.deck-table th{
+  background:color-mix(in srgb, var(--accent) 26%, var(--bg));color:var(--fg);
+  text-align:left;font-weight:700;padding:.6em .9em;letter-spacing:.02em;
+  border-bottom:2px solid var(--accent);
+}
+.deck-table td{
+  padding:.55em .9em;border-bottom:1px solid color-mix(in srgb, var(--muted) 55%, transparent);
+  color:var(--fg);
+}
+.deck-table .num{text-align:right;font-variant-numeric:tabular-nums}
+.deck-table tbody tr:nth-child(even){background:color-mix(in srgb, var(--panel) 62%, transparent)}
+#progress{position:fixed;top:0;left:0;height:3px;width:0;background:var(--accent);z-index:30;transition:width .25s}
+#hud{
+  position:fixed;left:22px;right:22px;bottom:18px;z-index:50;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:10px;align-items:center;
+  color:var(--muted);font-size:13px;letter-spacing:.08em;font-variant-numeric:tabular-nums;
+}
+#hud button{
+  background:color-mix(in srgb, var(--panel) 88%, transparent);color:var(--fg);
+  border:1px solid color-mix(in srgb, var(--muted) 45%, transparent);border-radius:99px;
+  padding:8px 14px;min-height:34px;font:inherit;cursor:pointer;
+}
+#hud button:hover{border-color:var(--accent);color:var(--accent)}
+#notes-panel{
+  position:fixed;left:0;right:0;bottom:64px;z-index:40;display:none;
+  background:color-mix(in srgb, var(--panel) 96%, black 4%);
+  border-top:2px solid var(--accent);
+  padding:14px clamp(22px,4vw,64px) 18px;max-height:38vh;overflow:auto;
+}
+body.notes-open #notes-panel{display:block}
+#notes-panel .notes-head{display:flex;align-items:center;justify-content:space-between;gap:16px}
+#notes-close{
+  background:transparent;color:var(--muted);border:1px solid color-mix(in srgb, var(--muted) 45%, transparent);
+  border-radius:99px;padding:4px 12px;font:inherit;cursor:pointer;min-height:30px;
+}
+#notes-close:hover{color:var(--accent);border-color:var(--accent)}
+#notes-panel .notes-label{
+  color:var(--accent);font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+  font-size:12px;margin-bottom:8px;
+}
+#notes-text{white-space:pre-wrap;line-height:1.65;font-size:clamp(15px,1.5vw,18px);color:var(--fg)}
+#notes-text.is-empty{color:var(--muted);font-style:italic}
+#help-panel{
+  position:fixed;right:22px;bottom:64px;z-index:60;max-width:390px;
+  background:color-mix(in srgb, var(--panel) 96%, black 4%);color:var(--fg);
+  border:1px solid color-mix(in srgb, var(--accent) 55%, transparent);border-radius:14px;
+  padding:16px 20px;box-shadow:0 18px 50px rgba(0,0,0,.45);font-size:14px;line-height:1.8;
+}
+#help-panel[hidden]{display:none}
+#help-panel kbd{
+  background:color-mix(in srgb, var(--accent) 22%, transparent);border-radius:5px;
+  padding:1px 6px;font-family:inherit;font-size:12px;
+}
+#toast{
+  position:fixed;left:50%;bottom:84px;transform:translateX(-50%);z-index:70;
+  background:color-mix(in srgb, var(--panel) 96%, black 4%);color:var(--fg);
+  border:1px solid color-mix(in srgb, var(--accent) 55%, transparent);border-radius:99px;
+  padding:9px 18px;font-size:13px;
+}
+#toast[hidden]{display:none}
+#blank{position:fixed;inset:0;z-index:80;display:none;pointer-events:none}
+body.blank-black #blank{display:block;background:#000}
+body.blank-white #blank{display:block;background:#fff}
+body.blank-black #hud,body.blank-white #hud{visibility:hidden;pointer-events:none}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+body.overview #stage{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px;
+  grid-auto-rows:var(--deck-thumb-height,180px);
+  padding:18px 18px 92px;position:fixed;inset:0;overflow:auto;align-content:start;
+}
+body.overview .slide-frame{
+  position:relative;inset:auto;width:100%;aspect-ratio:16/9;overflow:hidden;
+  border:1px solid color-mix(in srgb, var(--muted) 35%, transparent);border-radius:12px;
+  cursor:pointer;background:var(--bg);outline:none;
+}
+body.overview .slide-frame:hover{border-color:var(--accent)}
+body.overview .slide-frame.is-current{outline:2px solid var(--accent);outline-offset:2px}
+body.overview .slide-frame:focus-visible{outline:2px solid var(--accent);outline-offset:-3px}
+body.overview .slide-frame::after{
+  content:attr(data-frame);position:absolute;right:8px;bottom:6px;z-index:2;
+  font-size:12px;color:var(--muted);background:color-mix(in srgb, var(--bg) 84%, transparent);
+  border:1px solid color-mix(in srgb, var(--muted) 40%, transparent);border-radius:6px;
+  padding:1px 7px;font-variant-numeric:tabular-nums;
+}
+body.overview .slide{
+  display:flex !important;position:absolute;inset:0;width:1280px;height:720px;
+  transform:scale(var(--deck-thumb-scale,.25));transform-origin:top left;pointer-events:none;
+  animation:none !important;
+}
+body.overview .bullets li{opacity:1 !important;animation:none !important}
+body.overview .media-canvas{width:1280px;height:720px}
+body.overview #notes-panel,body.presenting #notes-panel{display:none !important}
+body.presenting #notes-toggle{opacity:.55}
+body.presenting #hud{opacity:0;pointer-events:none;transition:opacity .25s}
+body.presenting #hud:hover{opacity:1;pointer-events:auto}
+@media (max-width:900px){
+  .slide{padding:clamp(22px,5vw,44px)}
+  h1{font-size:clamp(34px,8.5vw,64px)}
+  h2{font-size:clamp(26px,6.5vw,48px)}
+  .statement-title{font-size:clamp(26px,7vw,54px)}
+  .subtitle{font-size:clamp(16px,3.4vw,24px)}
+  .bullets li{font-size:clamp(16px,3.4vw,24px)}
+  .kicker{font-size:13px}
+  .deck-table{font-size:14px}
+  .deck-table th,.deck-table td{padding:.55em .6em}
+  #hud{left:10px;right:10px;bottom:10px;gap:6px;font-size:12px}
+  #hud button{padding:10px 16px;min-height:44px}
+  #notes-panel{bottom:68px;max-height:45vh}
+  #help-panel{right:10px;bottom:68px;left:10px;max-width:none}
+}
+@media (max-width:640px){
+  #theme-label{display:none}
+}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation:none !important;transition:none !important}
+}
+@media print{
+  html,body{height:auto;overflow:visible;background:#fff}
+  .slide-frame{position:relative;display:block !important}
+  .slide{position:relative;display:block !important;height:100vh;page-break-after:always;padding:48px}
+  body.motion .bullets li{opacity:1 !important;animation:none !important}
+  #progress,#hud,#notes-panel,#help-panel,#toast{display:none !important}
+}
+
+#hud button:disabled{opacity:.4;cursor:default}
+#page-number{width:56px;padding:7px;border:1px solid var(--muted);border-radius:8px;background:var(--panel);color:var(--fg);font:inherit}
+#delivery-bar{position:fixed;top:18px;left:22px;right:22px;z-index:45;display:flex;align-items:center;gap:12px;font-size:13px}
+#delivery-status{flex:1;color:var(--muted)}
+#delivery-bar a,#delivery-bar button,.review-exports a{display:inline-block;text-decoration:none;border:1px solid var(--muted);border-radius:99px;padding:9px 14px;background:var(--panel);color:var(--fg);font:inherit;cursor:pointer}
+#delivery-bar a:hover,#delivery-bar button:hover,.review-exports a:hover{border-color:var(--accent);color:var(--accent)}
+#delivery-bar #download-pptx{background:var(--accent);color:var(--bg);border-color:var(--accent)}
+#review-panel{background:var(--panel);color:var(--fg);border:1px solid var(--muted);border-radius:18px;width:min(620px,calc(100vw - 24px));max-height:85vh;padding:24px;overflow:auto}
+#review-panel::backdrop{background:rgba(0,0,0,.65)}
+.review-head{display:flex;justify-content:space-between;align-items:center;gap:16px}
+.review-head h2{margin:0;font-size:24px}
+#review-close{border:1px solid var(--muted);border-radius:10px;background:transparent;color:var(--fg);padding:8px 12px;font:inherit;cursor:pointer}
+#review-panel p{line-height:1.65;color:var(--muted)}
+#review-panel h3{margin:24px 0 10px;font-size:17px}
+#review-panel ul,#review-panel ol{list-style:none;padding:0;margin:0}
+#review-panel li+li{margin-top:8px}
+#review-panel li button{width:100%;text-align:left;display:flex;gap:12px;align-items:center;background:var(--bg);color:var(--fg);border:1px solid transparent;border-radius:10px;padding:12px;font:inherit;cursor:pointer}
+#review-panel li button:hover{border-color:var(--accent)}
+#review-issues li button{display:block}
+#review-issues strong,#review-issues span{display:block;line-height:1.6}
+#review-issues span{color:var(--muted);font-size:13px;margin-top:4px}
+.review-exports{display:flex;flex-wrap:wrap;gap:8px}
+body.presenting #delivery-bar{display:none}
+button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+@media(max-width:640px){
+  #delivery-bar{left:10px;right:10px;top:10px;gap:8px}
+  #delivery-status{display:none}
+  #delivery-bar a,#delivery-bar button{padding:10px 12px;min-height:44px}
+  #hud button{padding:9px 12px}
+  #notes-panel,#help-panel{bottom:160px}
+  #review-panel{padding:18px}
+}
+@media print{#delivery-bar,#review-panel{display:none!important}}
+
+</style>
+</head>
+<body class="motion">
+<div id="progress" aria-hidden="true"></div>
+<div id="delivery-bar">
+  <span id="delivery-status">演示文稿 · 请检查后交付</span>
+  <a id="download-pptx" href="./%E9%B8%BF%E8%92%99%E7%89%88%E6%94%B9%E8%BF%9B%E8%AF%B4%E6%98%8E.pptx" download>下载 PPTX</a>
+  <button id="review-toggle" type="button" aria-haspopup="dialog">检查与导出</button>
+</div>
+<dialog id="review-panel" aria-labelledby="review-title">
+  <div class="review-head"><h2 id="review-title">检查与导出</h2><button id="review-close" type="button">关闭</button></div>
+  <p id="review-summary">静态检查发现 0 项提示；请核对实际显示。</p>
+  <div class="review-exports"><a id="review-download-pptx" href="./%E9%B8%BF%E8%92%99%E7%89%88%E6%94%B9%E8%BF%9B%E8%AF%B4%E6%98%8E.pptx" download>下载 PPTX</a><a id="download-project" href="./%E9%B8%BF%E8%92%99%E7%89%88%E6%94%B9%E8%BF%9B%E8%AF%B4%E6%98%8E.json" download>保存可编辑项目</a></div>
+  <p>用 PowerPoint / WPS 打开 PPTX 可直接修改文字、图片和图表。让 Agent 继续修改时，使用保存的项目文件。</p>
+  <h3>检查提示 · 点击定位页面</h3>
+  <p>静态检查未发现问题；仍需核对实际排版和事实。</p>
+  <p>文字尺寸是静态估算；这里不能证明 PowerPoint / WPS 排版已通过验收。</p>
+  <h3>页面目录</h3><ol id="review-outline"><li><button type="button" data-review-slide="1"><span>1</span>鸿蒙版移植改进说明</button></li><li><button type="button" data-review-slide="2"><span>2</span>移植概览：一套代码，两种平台</button></li><li><button type="button" data-review-slide="3"><span>3</span>第一部分：移植中发现的安卓侧问题</button></li><li><button type="button" data-review-slide="4"><span>4</span>两类查询的课程 ID 形态不一致</button></li><li><button type="button" data-review-slide="5"><span>5</span>上课内容字段只有按周查询才完整</button></li><li><button type="button" data-review-slide="6"><span>6</span>教务给的课程颜色不可用</button></li><li><button type="button" data-review-slide="7"><span>7</span>第二部分：鸿蒙侧新增的功能</button></li><li><button type="button" data-review-slide="8"><span>8</span>桌面服务卡片：长条左右分栏</button></li><li><button type="button" data-review-slide="9"><span>9</span>整学期记忆与离线可用</button></li><li><button type="button" data-review-slide="10"><span>10</span>课表可读性改进</button></li><li><button type="button" data-review-slide="11"><span>11</span>深色模式与系统栏衔接</button></li><li><button type="button" data-review-slide="12"><span>12</span>Mate 80 Pro Max 适配（1320 × 2848）</button></li><li><button type="button" data-review-slide="13"><span>13</span>开课前实况窗提醒（最新）</button></li><li><button type="button" data-review-slide="14"><span>14</span>移植中发现并修复的通用 bug</button></li><li><button type="button" data-review-slide="15"><span>15</span>ArkUI 状态管理：三个反复踩的坑</button></li><li><button type="button" data-review-slide="16"><span>16</span>原版已修 bug 的完整继承</button></li><li><button type="button" data-review-slide="17"><span>17</span>移植不是复制，是重新审视一遍接口</button></li><li><button type="button" data-review-slide="18"><span>18</span>工程与文档</button></li></ol>
+</dialog>
+<div id="stage">
+<div class="slide-frame" data-frame="1" tabindex="-1" role="button" aria-label="鸿蒙版移植改进说明"><section class="slide slide--cover" data-index="01" data-notes="这是给原作者的改进说明。核心想传达三件事：第一，移植是完整的，不是套壳；第二，移植过程中发现了原版一些真实的接口问题，这些对安卓版也有价值；第三，在鸿蒙侧补了一些原版没有的功能。
+
+原版仓库：1812355417/smu-pocket，GPL-3.0。鸿蒙版是衍生作品，同样遵循 GPL-3.0，源码完整开放。"><div class="slide-inner"><div class="kicker">致原作者</div><h1>鸿蒙版移植改进说明</h1><div class="subtitle">从 Android 原版 Kotlin / Compose 到 HarmonyOS NEXT 纯 ArkTS / ArkUI</div><div class="meta">由 dsh-ppt 生成</div></div></section></div>
+<div class="slide-frame" data-frame="2" tabindex="-1" role="button" aria-label="移植概览：一套代码，两种平台"><section class="slide slide--bullets" data-index="02" data-notes="代码量比原版多，主要因为鸿蒙侧加了桌面卡片、深色模式、实况窗、课程配色等新功能。
+
+架构对照：Kotlin → ArkTS；Jetpack Compose → ArkUI 声明式；SharedPreferences → preferences / file.fs。业务逻辑层几乎一一对应，所以原版的 bug 修复也都继承了。
+
+原版架构文档里那些经过真实抓包修正的细节我都保留了：固定 14 节网格、今日页与课表页解耦、会话失效检测登录页 HTML 而非只看 401、成绩接口必须分页、网考号字段是 xid 不是 xkh。"><div class="slide-inner"><div class="kicker">Baseline</div><h2>移植概览：一套代码，两种平台</h2><ul><li style="--i:0">纯 ArkTS / ArkUI 重写，无 WebView 套壳、无 Kotlin 残留</li><li style="--i:1">31 个 .ets 文件 / 8148 行（原版 Kotlin 4719 行）</li><li style="--i:2">38 个单元测试：周次换算 / 学期代码 / JSON 解析</li><li style="--i:3">真机验证：Mate 80 Pro Max，HarmonyOS 7.0.0.111 / API 26</li><li style="--i:4">遵循 GPL-3.0，源码完整开放，保留原作者署名</li></ul></div></section></div>
+<div class="slide-frame" data-frame="3" tabindex="-1" role="button" aria-label="第一部分：移植中发现的安卓侧问题"><section class="slide slide--section" data-index="03" data-notes="这部分是原作者最可能关心的——不是鸿蒙特有的问题，而是移植时被迫重新审视接口，反而暴露出来的安卓侧的坑。"><div class="slide-inner"><div class="kicker"></div><h2>第一部分：移植中发现的安卓侧问题</h2><div class="accent-line"></div><div class="subtitle">这些对原版同样适用</div></div></section></div>
+<div class="slide-frame" data-frame="4" tabindex="-1" role="button" aria-label="两类查询的课程 ID 形态不一致"><section class="slide slide--bullets" data-index="04" data-notes="这是我在移植时踩到的第一个严重问题。鸿蒙和安卓都会遇到，因为是接口本身的特性。
+
+整学期总表返回的 id 是课程码形态，按周查询返回的是另一套编码。如果缓存用 id 做 key，合并时两类数据互不认识，结果就是同一节课存了两份。
+
+正确做法是用业务键。但业务键也有坑：实测「呼吸系统|周二|第6节」有 7 条不同周次的记录，因为教务总表每行代表一个排课任务，不是一门课。所以合并时要带周次维度。
+
+如果安卓版也是按 id 去重，建议检查一下。"><div class="slide-inner"><div class="kicker">接口问题</div><h2>两类查询的课程 ID 形态不一致</h2><ul><li style="--i:0">整学期总表：100037TMP8493104</li><li style="--i:1">按周查询：103868440W1172026010016411</li><li style="--i:2">后果：按 ID 去重永远匹配不上 → 同一节课在缓存里出现两次</li><li style="--i:3">修法：改用业务键（课程名 + 星期 + 起止节）匹配</li><li style="--i:4">另发现：业务键也重复 46 组，因教务总表每行是一个排课任务</li></ul></div></section></div>
+<div class="slide-frame" data-frame="5" tabindex="-1" role="button" aria-label="上课内容字段只有按周查询才完整"><section class="slide slide--bullets" data-index="05" data-notes="这个发现挺有意思：同一个字段，两种查询的完整度差了五倍。
+
+原因是教务系统对整学期总表做了裁剪，只保留了部分字段。而按周查询走的是另一个接口，字段是齐的。
+
+所以最佳策略是两者结合：整学期数据保证离线能翻任意周，按周数据负责补齐内容。每次联网都合并一次，缓存会越来越好用。"><div class="slide-inner"><div class="kicker">接口问题</div><h2>上课内容字段只有按周查询才完整</h2><ul><li style="--i:0">sknrjj（上课内容）在整学期总表中仅 43/220 条有值</li><li style="--i:1">按周查询则 16/16 全带</li><li style="--i:2">后果：只缓存整学期数据 → 大部分课程没有内容可显示</li><li style="--i:3">修法：以整学期为骨架，每次联网把按周数据合并进去，越用越全</li></ul></div></section></div>
+<div class="slide-frame" data-frame="6" tabindex="-1" role="button" aria-label="教务给的课程颜色不可用"><section class="slide slide--bullets" data-index="06" data-notes="这个问题很隐蔽。一开始以为是渲染问题，统计了 220 条数据才发现是源数据本身就不可用。
+
+教务给的 bgcolor 是排课任务级别的，不是课程级别的，所以同一门课不同周次颜色会变。
+
+自己算颜色的好处是稳定：跨周、跨天、重启 App 都不变。用哈希+线性探测而不是直接取模，是为了保证新增一门课只影响它后面的少数几门，不会整表重排。"><div class="slide-inner"><div class="kicker">数据问题</div><h2>教务给的课程颜色不可用</h2><ul><li style="--i:0">教务只提供 4 种颜色，其中蓝 #1f86c7 占 131/220 条（60%）</li><li style="--i:1">同一门课每周换色：「呼吸系统」出现过 4 种颜色，「大学英语」3 种</li><li style="--i:2">后果：课表大面积同色，看起来像数据缺失</li><li style="--i:3">修法：按课程名做 FNV-1a 哈希 → 14 色调色板，冲突则线性探测</li><li style="--i:4">实测 11 门课 → 11 种颜色，零碰撞</li></ul></div></section></div>
+<div class="slide-frame" data-frame="7" tabindex="-1" role="button" aria-label="第二部分：鸿蒙侧新增的功能"><section class="slide slide--section" data-index="07" data-notes="这些是鸿蒙版比安卓版多出来的能力，一部分是平台特性（桌面卡片、实况窗），一部分是通用的体验改进。"><div class="slide-inner"><div class="kicker"></div><h2>第二部分：鸿蒙侧新增的功能</h2><div class="accent-line"></div><div class="subtitle">原版没有的</div></div></section></div>
+<div class="slide-frame" data-frame="8" tabindex="-1" role="button" aria-label="桌面服务卡片：长条左右分栏"><section class="slide slide--bullets" data-index="08" data-notes="这是鸿蒙独有的能力（Form + FormExtensionAbility），安卓对应的是 App Widget，但形态和技术栈完全不同。
+
+关键设计：数据用「应用写、卡片读」——卡片对网络请求和执行时长有严格限制，不适合自己打教务接口。所以 App 每次持久化时把今明两天的课写进 widget_data.json，卡片读这个文件。
+
+为什么落盘而不是只靠 updateForm 推送：卡片第一次被加到桌面时 App 可能根本没启动，那时必须能自己拿到数据。"><div class="slide-inner"><div class="kicker">鸿蒙特性</div><h2>桌面服务卡片：长条左右分栏</h2><ul><li style="--i:0">2×4 长条卡片，左栏今天 / 右栏明天</li><li style="--i:1">每门课显示「课程名 · 时间 · 授课老师 · 上课内容」</li><li style="--i:2">两栏各自独立上下滑动</li><li style="--i:3">30 分钟自动刷新，跨零点自动切到新的一天</li><li style="--i:4">点击卡片直接打开 App</li></ul></div></section></div>
+<div class="slide-frame" data-frame="9" tabindex="-1" role="button" aria-label="整学期记忆与离线可用"><section class="slide slide--bullets" data-index="09" data-notes="原版是登录态失效就看不了课表。鸿蒙版改成登录一次记住整学期。
+
+技术上做了三件事：周次改为按今天实时算（不再用缓存时刻的快照值）；今日课程从整学期缓存实时过滤；合并两种数据源补全上课内容。
+
+实测：删掉 session 模拟登录失效，今日页能还原当前周，能翻到第 3、14、15、18 周，内容完整。"><div class="slide-inner"><div class="kicker">体验改进</div><h2>整学期记忆与离线可用</h2><ul><li style="--i:0">登录一次缓存整学期 220 条课程，覆盖 1–20 周</li><li style="--i:1">登录失效后仍可正常翻任意周、看成绩</li><li style="--i:2">离线状态下今日页按真实日期实时计算当天课表</li><li style="--i:3">副标题标注「离线缓存」，用户清楚知道数据来源</li></ul></div></section></div>
+<div class="slide-frame" data-frame="10" tabindex="-1" role="button" aria-label="课表可读性改进"><section class="slide slide--bullets" data-index="10" data-notes="月份规则是按用户要求定的：一周跨两个月时，标题用周一所在的月份。
+
+第 9 周就是典型：周一在 10/26，周日是 11/1，标题显示「10月」，日期行正常显示 26-31 然后 1。
+
+这里我犯过一个错：曾用错误的前提质疑正确的实现，以为第 18 周显示 12 月是 bug，实际周一就是 12/28，规则完全正确。"><div class="slide-inner"><div class="kicker">体验改进</div><h2>课表可读性改进</h2><ul><li style="--i:0">标题带月份：第 18 周 · 12月，跨月取前一个月（即周一所在月）</li><li style="--i:1">表头星期下方显示每日日期，今天用实心圆底高亮</li><li style="--i:2">跨月日期加小圆点提示</li><li style="--i:3">格子里显示上课内容（弹性布局，跨多节的大格子多显示几行）</li></ul></div></section></div>
+<div class="slide-frame" data-frame="11" tabindex="-1" role="button" aria-label="深色模式与系统栏衔接"><section class="slide slide--bullets" data-index="11" data-notes="深色模式最容易漏的不是背景色，而是那些「浅底+深字」的组合。成绩页的分档配色（深绿 #0B8A4B、深红 #C62828）在深底上几乎看不见。
+
+设计原则是保持同一套色彩语义（绿=优秀、橙=及格），只把明度反过来。
+
+系统栏那个接缝值得一提：手势导航下 setWindowSystemBarProperties 的 navigationBarColor 会被系统静默忽略，接口返回成功但 hilog 里那个值是 null。正解是用 setWindowBackgroundColor 取 surface 色。
+
+App 页面和卡片走的是两套机制：App 用 Theme.colors(isDark)，卡片只能用资源限定词目录，因为它跑在独立的 FormExtensionAbility 里，不能引用带文件能力的模块。"><div class="slide-inner"><div class="kicker">体验改进</div><h2>深色模式与系统栏衔接</h2><ul><li style="--i:0">四个页面 + 登录页 + 桌面卡片全部适配，跟随系统</li><li style="--i:1">修掉 4 处「为浅色背景设计的深色文字」在深底上不可读</li><li style="--i:2">底部系统栏与 App 导航栏无缝衔接，消除深色下的接缝</li><li style="--i:3">课表色块无需另做一套：文字颜色按背景相对亮度自动选黑白</li></ul></div></section></div>
+<div class="slide-frame" data-frame="12" tabindex="-1" role="button" aria-label="Mate 80 Pro Max 适配（1320 × 2848）"><section class="slide slide--bullets" data-index="12" data-notes="宏蒙的 14 节网格在长屏手机上装不下，这是物理限制：14 × 62vp = 868vp，而可用高度只有约 616vp。
+
+强行压缩到 44vp 会让字号小到看不清，所以我选择保持 62vp 靠滚动，这是刻意取舍。
+
+顺带发现一个只有长屏才暴露的 bug：设置页顶部凭空多出 170px 空白。根因是 ArkUI 的 Scroll 默认按 Alignment.Center 摆放内容，内容短就居中。屏幕越长越明显。修法是显式 .align(Alignment.Top)。"><div class="slide-inner"><div class="kicker">鸿蒙特性</div><h2>Mate 80 Pro Max 适配（1320 × 2848）</h2><ul><li style="--i:0">真机规格：1320×2848，6.9 英寸，dpi 480 → 约 440 × 949 vp</li><li style="--i:1">模拟器默认 1320×2232，比真机矮 616px，按旧尺寸调的布局会在真机留白</li><li style="--i:2">课表格子高度自适应：实测该机型只能滚动（14 节 × 62vp &gt; 可用 616vp）</li><li style="--i:3">一屏可见 10 节（原来 8 节），多出的高度全用于展示内容</li></ul></div></section></div>
+<div class="slide-frame" data-frame="13" tabindex="-1" role="button" aria-label="开课前实况窗提醒（最新）"><section class="slide slide--bullets" data-index="13" data-notes="这是刚做的功能，也是最有鸿蒙特色的一项。
+
+实况窗的限制必须说清楚：它的 event 字段只有 15 个固定场景（打车、外卖、航班、计时、导航…），全部是商业场景，没有教育类。所以我用 TIMER（计时）场景，它是唯一能表达「距某时刻还有多久」的通用场景。
+
+另外华为要求按场景申请权益，个人开发者可以拿 60 天调试权限，需要审核。
+
+技术上踩了不少坑：TIMER 场景的必填字段官方文档没列全，只能靠真机报错逐个补。实际顺序是 layoutData → clickAction → nodeIcons → content → capsule.icon，全部是 401 参数错误（不是权限错误）。这些我都记在 docs 里了。"><div class="slide-inner"><div class="kicker">鸿蒙特性</div><h2>开课前实况窗提醒（最新）</h2><ul><li style="--i:0">状态栏胶囊 + 锁屏卡片常驻显示距上课时间</li><li style="--i:1">倒计时由系统每秒驱动，App 无需后台常驻</li><li style="--i:2">提前量可配：5 / 10 / 15 / 30 分钟</li><li style="--i:3">点击卡片直接跳回课表页</li><li style="--i:4">⚠️ 受华为权益管控：event 只有 15 个商业场景，没有「上课」，需借用 TIMER 场景并申请权益</li></ul></div></section></div>
+<div class="slide-frame" data-frame="14" tabindex="-1" role="button" aria-label="移植中发现并修复的通用 bug"><section class="slide slide--bullets" data-index="14" data-notes="这几个都是跨平台通用的组件行为问题。
+
+卡片溢出那个很典型：同时用了 width('100%') 和左右各 14 的 margin，实际宽度变成 100%+28，右侧就溢出。这个组件被今日、成绩、设置三个页面共用，所以修一处好了三页。"><div class="slide-inner"><div class="kicker">代码质量</div><h2>移植中发现并修复的通用 bug</h2><ul><li style="--i:0">卡片宽度溢出：width('100%') + 左右 margin = 100%+28px → 改 width('auto')</li><li style="--i:1">点击不响应：onClick 挂在 @Component 外层，事件不穿透 → 移到内部 Row</li><li style="--i:2">长屏设置页多 170px 空白：Scroll 默认垂直居中 → 显式 .align(Alignment.Top)</li><li style="--i:3">深色下分档文字不可读：深绿/深红在深底几乎看不见 → 深色下提亮</li></ul></div></section></div>
+<div class="slide-frame" data-frame="15" tabindex="-1" role="button" aria-label="ArkUI 状态管理：三个反复踩的坑"><section class="slide slide--bullets" data-index="15" data-notes="这三个是我花时间最多的。
+
+第一个表现为：切周后标题、节数都变了，只有网格不动。因为标题是普通 Text 绑定会更新，网格走 ForEach 键没变就不重建。
+
+第二个更迷惑：调试打印显示 JSON 有数据、解析也正常，但列表就是空的。原因是卡片首帧渲染时 @LocalStorageProp 还是 '[]'，@Builder 把这个空值捕获死了。
+
+第三个是原版代码里的问题：ArkTS 里 @Observed 对象不能整体替换赋值，否则 UI 绑定断掉，退出登录后界面卡住不刷新。改成原地 reset()。
+
+这三个坑的完整记录在 docs/移植踩坑.md，共 29 条。"><div class="slide-inner"><div class="kicker">技术要点</div><h2>ArkUI 状态管理：三个反复踩的坑</h2><ul><li style="--i:0">ForEach 键不含内容 → 切周时 ArkUI 判定「键同=同批组件」，复用旧节点不重建</li><li style="--i:1">@Builder 按值传参不刷新 → 首帧把初始值捕获死，数据到了也不更新（改 @Component + @Prop）</li><li style="--i:2">@Observed 不能整体替换 → this.state = new AppState() 会断掉 @ObjectLink 绑定</li></ul></div></section></div>
+<div class="slide-frame" data-frame="16" tabindex="-1" role="button" aria-label="原版已修 bug 的完整继承"><section class="slide slide--bullets" data-index="16" data-notes="这些是原版经过真实抓包修正过的细节，移植时全部保留了，一条没丢。
+
+这也是我想强调的：鸿蒙版不是重新猜接口，而是继承了原版所有已修正的知识。"><div class="slide-inner"><div class="kicker">兼容性</div><h2>原版已修 bug 的完整继承</h2><ul><li style="--i:0">固定 14 节网格（否则晚课 11–14 节整块消失）</li><li style="--i:1">今日页与课表页解耦（课表翻周不影响今日）</li><li style="--i:2">会话失效检测返回的登录页 HTML，而非只看 401</li><li style="--i:3">成绩接口必须分页（total=50 但默认只返回 20 行）</li><li style="--i:4">网考号字段是 xid，不是 xkh</li></ul></div></section></div>
+<div class="slide-frame" data-frame="17" tabindex="-1" role="button" aria-label="移植不是复制，是重新审视一遍接口"><section class="slide slide--quote" data-index="17" data-notes="最后总结一句。
+
+这次移植最大的收获不是「又多了一个平台」，而是被迫把每个接口细节重新对了一遍，反而暴露出几个确实影响数据正确性的问题。这些对安卓版同样适用。
+
+如果原作者愿意，我可以把这几处修复也整理成 patch 提交回安卓版。"><div class="slide-inner"><div class="kicker">金句</div><div class="quote-mark" aria-hidden="true">“</div><blockquote class="quote-text">移植不是复制，是重新审视一遍接口</blockquote><div class="quote-attr">—— 两处 ID 形态不一致、一个字段完整度差五倍、一套颜色其实不可用——这些在原平台上很难被发现</div></div></section></div>
+<div class="slide-frame" data-frame="18" tabindex="-1" role="button" aria-label="工程与文档"><section class="slide slide--bullets" data-index="18" data-notes="文档写得很细，尤其是移植踩坑那份 29 条，每条都有症状和修法，目的是让后来者不用重复踩。
+
+如果原作者有需要，我很乐意把这些经验也补充到原版仓库或文档里。"><div class="slide-inner"><div class="kicker">附录</div><h2>工程与文档</h2><ul><li style="--i:0">源码：31 个 .ets / 8148 行 + 38 个单元测试</li><li style="--i:1">9 份中文文档：移植说明 / 移植踩坑（29 条）/ 验证报告 / 构建安装 / 深色模式 / Mate 适配 / 环境安装 / 发布 / 实况窗</li><li style="--i:2">桌面卡片已真机验证，实况窗待华为权益审批</li><li style="--i:3">许可：GPL-3.0，与原版一致，保留原作者署名</li></ul></div></section></div>
+</div>
+<div id="hud" aria-live="polite">
+  <span id="counter">第 1 / 共 18</span>
+  <button id="previous-slide" type="button" aria-label="上一页">←</button><input id="page-number" type="number" min="1" max="18" value="1" aria-label="跳到第几页"><button id="next-slide" type="button" aria-label="下一页">→</button>
+  <span id="theme-label">主题 · 瑞士脉冲</span>
+  <button id="notes-toggle" type="button" title="S · 备注" aria-controls="notes-panel" aria-expanded="false">备注</button>
+  <button id="presenter-toggle" type="button" title="V · 演讲者">演讲者</button>
+  <button id="overview-toggle" type="button" title="G · 总览" aria-pressed="false">总览</button>
+  <button id="help-toggle" type="button" title="?" aria-label="快捷键 · Shortcuts">?</button>
+  <button id="fullscreen" type="button" title="F · Fullscreen" aria-label="Fullscreen">⛶</button>
+</div>
+<div id="notes-panel" role="region" aria-label="演讲者备注">
+  <div class="notes-head">
+    <span class="notes-label">演讲者备注</span>
+    <button id="notes-close" type="button" aria-label="关闭备注">×</button>
+  </div>
+  <div id="notes-text"></div>
+</div>
+<div id="help-panel" hidden>
+  <div class="notes-label">快捷键 · Shortcuts</div>
+  <p><kbd>←</kbd> <kbd>→</kbd> / <kbd>Space</kbd> 翻页 · <kbd>Home</kbd> / <kbd>End</kbd> 首末页 · <kbd>S</kbd> 备注 · <kbd>V</kbd> 演讲者 · <kbd>G</kbd> 总览 · <kbd>F</kbd> 全屏 · <kbd>P</kbd> 打印 · <kbd>B</kbd> 黑屏 · <kbd>W</kbd> 白屏 · <kbd>Esc</kbd> 关闭 · <kbd>?</kbd> 快捷键 · Shortcuts</p>
+  <p>备注：未开演讲者窗口时按 S 显示在顶部；打开后只在演讲者窗口显示，观众看不到</p>
+  <p>点击缩略图跳页，方向键切换，Enter 进入，Esc 退出</p>
+</div>
+<div id="toast" role="status" hidden></div>
+<div id="blank" aria-hidden="true"></div>
+<script>
+(() => {
+  const frames = Array.from(document.querySelectorAll('.slide-frame'));
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const counter = document.getElementById('counter');
+  const progress = document.getElementById('progress');
+  const fullscreenBtn = document.getElementById('fullscreen');
+  const notesPanel = document.getElementById('notes-panel');
+  const notesText = document.getElementById('notes-text');
+  const notesBtn = document.getElementById('notes-toggle');
+  const notesClose = document.getElementById('notes-close');
+  const presenterBtn = document.getElementById('presenter-toggle');
+  const overviewBtn = document.getElementById('overview-toggle');
+  const helpBtn = document.getElementById('help-toggle');
+  const helpPanel = document.getElementById('help-panel');
+  const toastEl = document.getElementById('toast');
+  let index = 0;
+  let syncDelivery = () => {};
+  let presenterWin = null;
+  let presenterInitSent = false;
+  let toastTimer = 0;
+  const total = slides.length;
+  const ui = {"slide":"第","of":"/ 共","theme":"主题","help":"← → 翻页 · F 全屏 · G 总览 · S 备注 · P 打印","coverKicker":"开场","pointKicker":"要点","statementKicker":"核心观点","quoteKicker":"金句","tableKicker":"数据","continuation":"（续）","notesLabel":"演讲者备注","notesToggle":"备注","closingTitle":"谢谢","closingSubtitle":"讨论与问答","generatedBy":"由 dsh-ppt 生成","overviewToggle":"总览","presenterToggle":"演讲者","presenterLabel":"演讲者视图 · Presenter view","helpTitle":"快捷键 · Shortcuts","noNotes":"（本页无备注）","closeLabel":"关闭","currentLabel":"当前页 · Current","nextLabel":"下一页 · Next","timerLabel":"计时 · Timer","presenterHint":"备注：未开演讲者窗口时按 S 显示在顶部；打开后只在演讲者窗口显示，观众看不到","wrapHint":"已环绕到","popupBlocked":"浏览器拦截了演讲者窗口，请允许弹出窗口后按 V 重试","fullscreenUnavailable":"当前窗口无法进入全屏，请在浏览器中独立打开演示文件后重试。","notesCloseLabel":"关闭备注","overviewHint":"点击缩略图跳页，方向键切换，Enter 进入，Esc 退出"};
+
+  function notesOf(i) { return slides[i] && slides[i].dataset ? (slides[i].dataset.notes || '') : ''; }
+  function titleOf(i) {
+    const el = slides[i] ? slides[i].querySelector('h1,h2,.statement-title,.quote-text') : null;
+    return el ? el.textContent.trim() : '';
+  }
+  function state() {
+    const next = (index + 1) % total;
+    return { index: index, total: total, title: titleOf(index), notes: notesOf(index), nextTitle: titleOf(next), nextNotes: notesOf(next) };
+  }
+  window.__dshPpt = { go: function (delta) { go(index + delta); }, jump: function (i) { go(i); }, state: state };
+
+  function toast(message) {
+    toastEl.textContent = message;
+    toastEl.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toastEl.hidden = true; }, 2600);
+  }
+
+  function syncNotes() {
+    const notes = notesOf(index);
+    notesText.textContent = notes || ui.noNotes;
+    notesText.classList.toggle('is-empty', notes === '');
+    notesBtn.setAttribute('aria-expanded', document.body.classList.contains('notes-open') ? 'true' : 'false');
+    updatePresenter();
+  }
+
+  function sendInit() {
+    if (!presenterOpen()) return;
+    try {
+      presenterWin.postMessage({
+        __dshPpt: 'init',
+        title: (document.title.split(' · ')[1] || document.title),
+        css: document.querySelector('style') ? document.querySelector('style').textContent : '',
+        total: total,
+        slides: slides.map(function (slide) { return slide.outerHTML; }),
+      }, '*');
+    } catch (_) { /* popup closing */ }
+  }
+
+  function sendState() {
+    if (!presenterOpen()) return;
+    const next = (index + 1) % total;
+    try {
+      presenterWin.postMessage({
+        __dshPpt: 'state',
+        index: index,
+        total: total,
+        title: titleOf(index),
+        nextTitle: titleOf(next),
+        notes: notesOf(index),
+        nextNotes: notesOf(next),
+        blank: document.body.classList.contains('blank-black') ? 'black' : (document.body.classList.contains('blank-white') ? 'white' : null),
+      }, '*');
+    } catch (_) { /* popup closing */ }
+  }
+
+  function updatePresenter() { sendState(); }
+
+  function go(next) {
+    if (document.body.classList.contains('blank-black') || document.body.classList.contains('blank-white')) setBlank(null);
+    const wrapped = next < 0 || next >= total;
+    index = (next + total) % total;
+    slides.forEach(function (slide, i) {
+      slide.classList.toggle('is-active', i === index);
+      if (frames[i]) frames[i].classList.toggle('is-current', i === index);
+    });
+    counter.textContent = ui.slide + ' ' + (index + 1) + ' ' + ui.of + ' ' + total;
+    syncDelivery(index);
+    progress.style.width = ((index + 1) / total * 100) + '%';
+    document.title = (index + 1) + ' / ' + total + ' · ' + "南医大口袋 · 鸿蒙版移植改进说明";
+    try { history.replaceState?.(null, '', '#slide-' + (index + 1)); } catch (_) { /* file:// 下个别浏览器可能拒绝 */ }
+    if (wrapped) toast(ui.wrapHint + ' ' + (index + 1) + ' / ' + total);
+    syncNotes();
+  }
+
+  function notesOpen() { return document.body.classList.contains('notes-open'); }
+  function presenterOpen() { try { return !!(presenterWin && !presenterWin.closed); } catch (_) { return false; } }
+
+  function setNotes(on) {
+    document.body.classList.toggle('notes-open', on);
+    if (on) setOverview(false);
+    syncNotes();
+  }
+
+  function updateThumbScale() {
+    if (!document.body.classList.contains('overview')) return;
+    requestAnimationFrame(function () {
+      const width = frames[0] ? frames[0].getBoundingClientRect().width : 0;
+      if (width > 0) {
+        document.documentElement.style.setProperty('--deck-thumb-scale', String(width / 1280));
+        document.documentElement.style.setProperty('--deck-thumb-height', String(width * 9 / 16) + 'px');
+      }
+    });
+  }
+
+  function setOverview(on) {
+    document.body.classList.toggle('overview', on);
+    overviewBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    frames.forEach(function (frame) { frame.tabIndex = on ? 0 : -1; });
+    if (on) {
+      document.body.classList.remove('notes-open');
+      helpPanel.hidden = true;
+      syncNotes();
+      updateThumbScale();
+    }
+  }
+
+  function presenterHtml() {
+    const labelCurrent = "当前页 · Current";
+    const labelNext = "下一页 · Next";
+    const labelNotes = "演讲者备注";
+    const noNotes = "（本页无备注）";
+    const hintText = "← → 翻页 · P 暂停 · T 重置 · +/- 字号 · B/W 黑/白屏 · Esc 结束";
+    const deckTitle = "南医大口袋 · 鸿蒙版移植改进说明";
+    const langAttr = "zh-CN";
+    const cs = getComputedStyle(document.documentElement);
+    const val = function (name, fallback) { const v = cs.getPropertyValue(name).trim(); return v || fallback; };
+    const css = [
+      ':root{--bg:' + val('--bg', '#070B14') + ';--panel:' + val('--panel', '#0D1424') + ';--fg:' + val('--fg', '#E8F1FF') + ';--muted:' + val('--muted', '#7E8BA8') + ';--accent:' + val('--accent', '#7C3AED') + ';--accent2:' + val('--accent2', '#06B6D4') + ';--font-heading:' + val('--font-heading', 'sans-serif') + ';--font-body:' + val('--font-body', 'sans-serif') + '}',
+      '*{box-sizing:border-box}',
+      'body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--font-body);height:100vh;display:flex;flex-direction:column;overflow:hidden}',
+      'header{display:flex;align-items:center;gap:14px;padding:9px 16px;border-bottom:1px solid color-mix(in srgb, var(--muted) 40%, transparent);font-size:13px;color:var(--muted)}',
+      'header #ptitle{color:var(--fg);font-weight:700;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+      'header #pclock{font-variant-numeric:tabular-nums}',
+      'main{flex:1;display:grid;grid-template-columns:1.12fr .88fr;gap:12px;padding:12px 16px;min-height:0}',
+      '.col{display:flex;flex-direction:column;gap:10px;min-height:0}',
+      '.card{background:var(--panel);border:1px solid color-mix(in srgb, var(--muted) 30%, transparent);border-radius:12px;padding:10px 12px;min-height:0;display:flex;flex-direction:column;gap:6px}',
+      '.card-notes{flex:1}',
+      '.lbl{color:var(--accent);font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}',
+      '.pv{position:relative;width:100%;aspect-ratio:16/9;overflow:hidden;border-radius:8px;background:var(--bg);border:1px solid color-mix(in srgb, var(--muted) 25%, transparent);--pv-scale:.3}',
+      '.pv-slide{position:absolute;left:0;top:0;transform:translate(var(--pv-x,0px),var(--pv-y,0px)) scale(var(--pv-scale,.25));transform-origin:top left}',
+      '.pv-slide .slide{display:flex !important;position:absolute;left:0;top:0;width:100vw;height:100vh;animation:none !important}',
+      '.pv-slide .bullets li{opacity:1 !important;animation:none !important}',
+      '#thumbs{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px}',
+      '#thumbs .thumb{position:relative;flex:0 0 128px;aspect-ratio:16/9;border-radius:8px;overflow:hidden;border:1px solid color-mix(in srgb, var(--muted) 35%, transparent);cursor:pointer;background:var(--bg);--pv-scale:.09}',
+      '#thumbs .thumb.is-current{outline:2px solid var(--accent);outline-offset:1px}',
+      '#pnotes{font-size:var(--notes-size,19px);line-height:1.6;white-space:pre-wrap;overflow:auto;flex:1}',
+      'footer{display:flex;align-items:center;gap:8px;padding:9px 16px;border-top:1px solid color-mix(in srgb, var(--muted) 40%, transparent);flex-wrap:wrap}',
+      'button{background:color-mix(in srgb, var(--panel) 90%, transparent);color:var(--fg);border:1px solid color-mix(in srgb, var(--muted) 45%, transparent);border-radius:99px;padding:6px 12px;min-height:34px;font:inherit;font-size:13px;cursor:pointer}',
+      'button:hover{border-color:var(--accent);color:var(--accent)}',
+      'button[aria-pressed="true"]{background:var(--accent);color:var(--bg);border-color:var(--accent)}',
+      '#ptimer{font-variant-numeric:tabular-nums;font-size:20px;font-weight:700;color:var(--accent);margin-left:6px}',
+      '.bar{flex:1;min-width:100px;height:8px;background:color-mix(in srgb, var(--muted) 28%, transparent);border-radius:99px;overflow:hidden}',
+      '#pprog{height:100%;width:0;background:var(--accent);transition:width .2s}',
+      '.hint{color:var(--muted);font-size:11px;width:100%}',
+    ].join('');
+    const js = [
+      'var total=0,index=0,elapsed=0,started=Date.now(),paused=false,notesSize=19,slides=[],cssText="",curBlank=null,initialized=false,readyTries=0;',
+      'function q(id){return document.getElementById(id)}',
+      'function post(m){try{if(window.opener)window.opener.postMessage(m,"*")}catch(e){}}',
+      'function fmt(ms){var s=Math.max(0,Math.floor(ms/1000)),m=Math.floor(s/60);s=s%60;var h=Math.floor(m/60);m=m%60;return (h>0?(h<10?"0":"")+h+":":"")+(m<10?"0":"")+m+":"+(s<10?"0":"")+s}',
+      'function clock(){var d=new Date();return ("0"+d.getHours()).slice(-2)+":"+("0"+d.getMinutes()).slice(-2)+":"+("0"+d.getSeconds()).slice(-2)}',
+      'function tick(){if(!paused)elapsed=Date.now()-started;q("ptimer").textContent=fmt(elapsed);q("pclock").textContent=clock();if(window.requestAnimationFrame)requestAnimationFrame(tick);else setTimeout(tick,250)}',
+      'function fitBox(box){var rw=box.clientWidth||320,rh=box.clientHeight||180;var s=Math.min(rw/window.innerWidth,rh/window.innerHeight);var ox=(rw-window.innerWidth*s)/2,oy=(rh-window.innerHeight*s)/2;box.style.setProperty("--pv-scale",String(s));box.style.setProperty("--pv-x",ox+"px");box.style.setProperty("--pv-y",oy+"px")}',
+      'function fit(){fitBox(q("pv-cur"));fitBox(q("pv-next"));var th=q("thumbs").children;for(var i=0;i<th.length;i++){fitBox(th[i])}}',
+      'function setSlide(box,html){box.innerHTML="";var f=document.createElement("div");f.className="pv-slide";f.innerHTML=html;box.appendChild(f)}',
+      'function buildThumbs(){var box=q("thumbs");box.innerHTML="";slides.forEach(function(html,i){var t=document.createElement("div");t.className="thumb";var f=document.createElement("div");f.className="pv-slide";f.innerHTML=html;t.appendChild(f);t.addEventListener("click",function(){post({__dshPpt:"cmd",kind:"go",index:i})});box.appendChild(t)});fit()}',
+      'function renderState(st){index=st.index;total=st.total||total;q("pcounter").textContent=(index+1)+" / "+total;setSlide(q("pv-cur"),slides[index]||"");setSlide(q("pv-next"),slides[(index+1)%total]||"");q("pnotes").textContent=st.notes||' + JSON.stringify(ui.noNotes) + ';q("pprog").style.width=((index+1)/total*100)+"%";curBlank=st.blank||null;q("pv-black").setAttribute("aria-pressed",curBlank==="black"?"true":"false");q("pv-white").setAttribute("aria-pressed",curBlank==="white"?"true":"false");q("pv-black").textContent=curBlank==="black"?"取消黑屏":"黑屏";q("pv-white").textContent=curBlank==="white"?"取消白屏":"白屏";var th=q("thumbs").children;for(var i=0;i<th.length;i++){th[i].classList.toggle("is-current",i===index)}fit()}',
+      'function togglePause(){paused=!paused;if(!paused)started=Date.now()-elapsed;var b=q("pause");b.setAttribute("aria-pressed",paused?"true":"false");b.textContent=paused?"继续":"暂停"}',
+      'function resetTimer(){started=Date.now();elapsed=0}',
+      'function applyNotesSize(){document.documentElement.style.setProperty("--notes-size",notesSize+"px")}',
+      'window.addEventListener("message",function(e){var d=e.data||{};if(d.__dshPpt==="init"&&!initialized){initialized=true;slides=d.slides||[];total=d.total||slides.length;cssText=d.css||"";var st=document.createElement("style");st.textContent=cssText;document.head.appendChild(st);q("ptitle").textContent=d.title||"";buildThumbs()}else if(d.__dshPpt==="state"){renderState(d)}else if(d.__dshPpt==="close"){window.close()}});',
+      'window.addEventListener("resize",fit);',
+      'window.addEventListener("beforeunload",function(){post({__dshPpt:"cmd",kind:"closed"})});',
+      'document.addEventListener("keydown",function(e){var k=e.key;if(k==="ArrowRight"||k===" "){e.preventDefault();post({__dshPpt:"cmd",kind:"go",delta:1})}else if(k==="ArrowLeft"){e.preventDefault();post({__dshPpt:"cmd",kind:"go",delta:-1})}else if(k==="Escape"){post({__dshPpt:"cmd",kind:"end"});window.close()}else if(k.toLowerCase()==="p"){togglePause()}else if(k.toLowerCase()==="t"){resetTimer()}else if(k==="+"||k==="="){notesSize=Math.min(34,notesSize+2);applyNotesSize()}else if(k==="-"){notesSize=Math.max(12,notesSize-2);applyNotesSize()}else if(k.toLowerCase()==="b"){post({__dshPpt:"cmd",kind:"blank",color:curBlank==="black"?null:"black"})}else if(k.toLowerCase()==="w"){post({__dshPpt:"cmd",kind:"blank",color:curBlank==="white"?null:"white"})}});',
+      'q("prev").addEventListener("click",function(){post({__dshPpt:"cmd",kind:"go",delta:-1})});',
+      'q("next").addEventListener("click",function(){post({__dshPpt:"cmd",kind:"go",delta:1})});',
+      'q("pause").addEventListener("click",togglePause);',
+      'q("reset").addEventListener("click",resetTimer);',
+      'q("font-plus").addEventListener("click",function(){notesSize=Math.min(34,notesSize+2);applyNotesSize()});',
+      'q("font-minus").addEventListener("click",function(){notesSize=Math.max(12,notesSize-2);applyNotesSize()});',
+      'q("pv-black").addEventListener("click",function(){post({__dshPpt:"cmd",kind:"blank",color:curBlank==="black"?null:"black"})});',
+      'q("pv-white").addEventListener("click",function(){post({__dshPpt:"cmd",kind:"blank",color:curBlank==="white"?null:"white"})});',
+      'q("end").addEventListener("click",function(){post({__dshPpt:"cmd",kind:"end"});window.close()});',
+      'applyNotesSize();tick();function ready(){if(initialized)return;post({__dshPpt:"ready"});readyTries++;if(readyTries<5)setTimeout(ready,700)}setTimeout(ready,250);',
+    ].join('');
+    return '<!DOCTYPE html><html lang="' + langAttr + '"><head><meta charset="UTF-8"><title>' + deckTitle + ' · 演讲者视图</title><style>' + css + '</style></head><body>'
+      + '<header><div id="ptitle"></div><div id="pcounter"></div><div id="pclock" title="本地时间"></div></header>'
+      + '<main><div class="col">'
+      + '<div class="card"><div class="lbl">' + labelCurrent + '</div><div class="pv" id="pv-cur"></div></div>'
+      + '<div class="card"><div class="lbl">' + labelNext + '</div><div class="pv" id="pv-next"></div></div>'
+      + '<div class="card"><div class="lbl">SLIDES</div><div id="thumbs"></div></div>'
+      + '</div><div class="col"><div class="card card-notes"><div class="lbl">' + labelNotes + '</div><div id="pnotes"></div></div></div></main>'
+      + '<footer><button id="prev" title="上一页 (←)">◀</button><button id="next" title="下一页 (→)">▶</button><button id="pause" title="暂停 (P)" aria-pressed="false">暂停</button><button id="reset" title="重置计时 (T)">重置计时</button><button id="font-minus" title="备注字号减小 (-)">A−</button><button id="font-plus" title="备注字号增大 (+)">A+</button><button id="pv-black" title="黑屏 (B)">黑屏</button><button id="pv-white" title="白屏 (W)">白屏</button><button id="end" title="结束放映 (Esc)">结束放映</button><div id="ptimer">00:00</div><div class="bar"><div id="pprog"></div></div><div class="hint">' + hintText + '</div></footer>'
+      + '<scr' + 'ipt>' + js + '</scr' + 'ipt></body></html>';
+  }
+
+  async function toggleFullscreen() {
+    try {
+      if (document.fullscreenElement) { await document.exitFullscreen?.(); return; }
+      if (!document.documentElement.requestFullscreen || document.fullscreenEnabled === false) {
+        toast(ui.fullscreenUnavailable);
+        return;
+      }
+      await document.documentElement.requestFullscreen();
+      if (!document.fullscreenElement) toast(ui.fullscreenUnavailable);
+    } catch (_) { toast(ui.fullscreenUnavailable); }
+  }
+
+  function openPresenter() {
+    if (presenterOpen()) { try { presenterWin.focus(); } catch (_) { /* gone */ } return; }
+    let url = '';
+    try {
+      url = URL.createObjectURL(new Blob([presenterHtml()], { type: 'text/html' }));
+    } catch (_) { toast(ui.popupBlocked); return; }
+    presenterInitSent = false;
+    presenterWin = window.open(url, 'dsh-ppt-presenter', 'width=1180,height=760');
+    if (!presenterWin) {
+      try { URL.revokeObjectURL(url); } catch (_) { /* ignore */ }
+      toast(ui.popupBlocked);
+      return;
+    }
+    document.body.classList.add('presenting');
+    if (document.activeElement && typeof document.activeElement.blur === 'function') document.activeElement.blur();
+    setTimeout(function () { try { URL.revokeObjectURL(url); } catch (_) { /* ignore */ } }, 5000);
+  }
+
+  function closePresenter() {
+    if (presenterOpen()) {
+      try { presenterWin.postMessage({ __dshPpt: 'close' }, '*'); presenterWin.close(); } catch (_) { /* gone */ }
+    }
+    document.body.classList.remove('presenting');
+    presenterInitSent = false;
+    if (document.fullscreenElement) { try { document.exitFullscreen?.(); } catch (_) { /* ignore */ } }
+    setBlank(null);
+  }
+
+  function setBlank(color) {
+    document.body.classList.remove('blank-black', 'blank-white');
+    if (color === 'black') document.body.classList.add('blank-black');
+    else if (color === 'white') document.body.classList.add('blank-white');
+    sendState();
+  }
+
+  setInterval(function () {
+    if (!presenterOpen() && document.body.classList.contains('presenting')) {
+      document.body.classList.remove('presenting');
+      if (document.fullscreenElement) { try { document.exitFullscreen?.(); } catch (_) { /* ignore */ } }
+      setBlank(null);
+    }
+  }, 800);
+
+  window.addEventListener('message', function (event) {
+    if (event.source !== presenterWin) return;
+    const data = event.data || {};
+    if (data.__dshPpt === 'cmd' && (data.kind === 'end' || data.kind === 'closed')) { closePresenter(); return; }
+    if (!presenterOpen()) return;
+    if (data.__dshPpt === 'ready') {
+      if (!presenterInitSent) { presenterInitSent = true; sendInit(); }
+      sendState();
+      return;
+    }
+    if (data.__dshPpt !== 'cmd') return;
+    if (data.kind === 'go') {
+      setBlank(null);
+      if (typeof data.index === 'number') go(data.index);
+      else go(index + (data.delta || 0));
+      sendState();
+    } else if (data.kind === 'blank') {
+      setBlank(data.color || null);
+    } else if (data.kind === 'end') {
+      closePresenter();
+    } else if (data.kind === 'closed') {
+      document.body.classList.remove('presenting');
+      setBlank(null);
+    }
+  });
+
+  document.addEventListener('keydown', (event) => {
+    const key = event.key;
+    const lower = key.toLowerCase();
+    const targetEl = event.target;
+    if (document.getElementById('review-panel').open || event.ctrlKey || event.metaKey || event.altKey) return;
+    if (key !== 'Escape' && targetEl && (['INPUT', 'SELECT', 'TEXTAREA'].includes(targetEl.tagName) || targetEl.isContentEditable === true)) return;
+    const interactive = targetEl && (targetEl.tagName === 'BUTTON' || targetEl.tagName === 'INPUT' || targetEl.tagName === 'SELECT' || targetEl.tagName === 'TEXTAREA' || targetEl.isContentEditable === true);
+    if (key === ' ' && interactive) return;
+    if (key === 'Escape') {
+      if (!helpPanel.hidden) { helpPanel.hidden = true; return; }
+      if (document.body.classList.contains('overview')) { setOverview(false); return; }
+      if (notesOpen()) { setNotes(false); return; }
+      if (document.body.classList.contains('presenting') || document.body.classList.contains('blank-black') || document.body.classList.contains('blank-white')) { closePresenter(); return; }
+      if (document.fullscreenElement) { document.exitFullscreen?.(); return; }
+      return;
+    }
+    const inOverview = document.body.classList.contains('overview');
+    if (key === 'ArrowRight' || key === 'PageDown' || key === ' ' || (key === 'ArrowDown' && !inOverview)) {
+      event.preventDefault(); go(index + 1);
+    } else if (key === 'ArrowLeft' || key === 'PageUp' || (key === 'ArrowUp' && !inOverview)) {
+      event.preventDefault(); go(index - 1);
+    } else if (/^[1-9]$/.test(key) && !inOverview) {
+      const jumped = Number(key);
+      if (jumped <= total) { event.preventDefault(); go(jumped - 1); }
+    } else if (key === 'Home') {
+      event.preventDefault(); go(0);
+    } else if (key === 'End') {
+      event.preventDefault(); go(total - 1);
+    } else if (key === 'Enter' && inOverview) {
+      event.preventDefault(); setOverview(false);
+    } else if (lower === 'f') {
+      void toggleFullscreen();
+    } else if (lower === 'g') {
+      setOverview(!inOverview);
+    } else if (lower === 's') {
+      if (document.body.classList.contains('presenting')) { toast(ui.presenterHint); }
+      else { document.body.classList.toggle('notes-open'); syncNotes(); }
+    } else if (lower === 'v') {
+      if (presenterOpen()) closePresenter();
+      else openPresenter();
+    } else if (lower === 'b') {
+      setBlank(document.body.classList.contains('blank-black') ? null : 'black');
+    } else if (lower === 'w') {
+      setBlank(document.body.classList.contains('blank-white') ? null : 'white');
+    } else if (lower === 'p') {
+      window.print();
+    } else if (key === '?') {
+      helpPanel.hidden = !helpPanel.hidden;
+    }
+  });
+
+  let wheelLock = 0;
+  document.addEventListener('wheel', (event) => {
+    if (document.getElementById('review-panel').open || event.target.closest?.('#hud,#delivery-bar,#notes-panel,#help-panel')) return;
+    const now = Date.now();
+    if (now - wheelLock < 550 || document.body.classList.contains('overview') || notesOpen()) return;
+    wheelLock = now;
+    if (Math.abs(event.deltaY) > 12) go(index + (event.deltaY > 0 ? 1 : -1));
+  }, { passive: true });
+
+  let touchStartY = 0;
+  let touchOnStage = false;
+  document.addEventListener('touchstart', (event) => { touchOnStage = !document.getElementById('review-panel').open && !!event.target.closest?.('#stage'); touchStartY = event.touches[0].clientY; }, { passive: true });
+  document.addEventListener('touchend', (event) => {
+    const delta = event.changedTouches[0].clientY - touchStartY;
+    if (touchOnStage && Math.abs(delta) > 48 && !document.body.classList.contains('overview')) go(index + (delta < 0 ? 1 : -1));
+  }, { passive: true });
+
+  fullscreenBtn.addEventListener('click', () => { void toggleFullscreen(); });
+  notesBtn.addEventListener('click', () => {
+    if (document.body.classList.contains('presenting')) { toast(ui.presenterHint); return; }
+    setNotes(!notesOpen());
+  });
+  notesClose.addEventListener('click', () => setNotes(false));
+  presenterBtn.addEventListener('click', () => { if (presenterOpen()) closePresenter(); else openPresenter(); });
+  overviewBtn.addEventListener('click', () => setOverview(!document.body.classList.contains('overview')));
+  helpBtn.addEventListener('click', () => { helpPanel.hidden = !helpPanel.hidden; });
+  frames.forEach((frame, i) => {
+    frame.addEventListener('click', () => {
+      if (document.body.classList.contains('overview')) { go(i); setOverview(false); }
+    });
+    frame.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' && document.body.classList.contains('overview')) { go(i); setOverview(false); }
+    });
+  });
+  window.addEventListener('resize', updateThumbScale);
+  window.addEventListener('beforeunload', closePresenter);
+
+  syncDelivery = (function initDelivery(go, setOverview, current, total) {
+  const previous = document.getElementById('previous-slide')
+  const next = document.getElementById('next-slide')
+  const number = document.getElementById('page-number')
+  const panel = document.getElementById('review-panel')
+  const toggle = document.getElementById('review-toggle')
+  previous.addEventListener('click', () => go(Math.max(0, current() - 1)))
+  next.addEventListener('click', () => go(Math.min(total - 1, current() + 1)))
+  const jump = () => {
+    const value = Number(number.value)
+    if (Number.isInteger(value) && value >= 1 && value <= total) go(value - 1)
+    else number.value = String(current() + 1)
+  }
+  number.addEventListener('change', jump)
+  number.addEventListener('keydown', event => { if (event.key === 'Enter') { event.preventDefault(); jump() } })
+  toggle.addEventListener('click', () => panel.showModal())
+  document.getElementById('review-close').addEventListener('click', () => panel.close())
+  panel.querySelectorAll('[data-review-slide]').forEach(button => button.addEventListener('click', () => {
+    const slide = Number(button.dataset.reviewSlide)
+    if (Number.isInteger(slide) && slide >= 1 && slide <= total) { go(slide - 1); setOverview(false); panel.close() }
+  }))
+  return index => {
+    number.value = String(index + 1)
+    previous.disabled = index === 0
+    next.disabled = index === total - 1
+  }
+})(go, setOverview, () => index, total);
+  const start = Number.parseInt(location.hash?.replace('#slide-', ''), 10);
+  go(Number.isInteger(start) ? start - 1 : 0);
+})();
+</script>
+</body>
+</html>

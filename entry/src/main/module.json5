@@ -1,0 +1,78 @@
+{
+  "module": {
+    "name": "entry",
+    "type": "entry",
+    "description": "$string:module_desc",
+    "mainElement": "EntryAbility",
+    "deviceTypes": [
+      "phone",
+      "tablet",
+      "2in1"
+    ],
+    "deliveryWithInstall": true,
+    "installationFree": false,
+    "pages": "$profile:main_pages",
+    "abilities": [
+      {
+        "name": "EntryAbility",
+        "srcEntry": "./ets/entryability/EntryAbility.ets",
+        "description": "$string:EntryAbility_desc",
+        "icon": "$media:layered_image",
+        "label": "$string:EntryAbility_label",
+        "startWindowIcon": "$media:startIcon",
+        "startWindowBackground": "$color:start_window_background",
+        "exported": true,
+        "skills": [
+          {
+            "entities": [
+              "entity.system.home"
+            ],
+            "actions": [
+              "action.system.home"
+            ]
+          }
+        ]
+      }
+    ],
+    "extensionAbilities": [
+      {
+        "name": "EntryFormAbility",
+        "srcEntry": "./ets/entryformability/EntryFormAbility.ets",
+        "label": "$string:form_label",
+        "description": "$string:form_desc",
+        "type": "form",
+        "exported": false,
+        "metadata": [
+          {
+            "name": "ohos.extension.form",
+            "resource": "$profile:form_config"
+          }
+        ]
+      }
+    ],
+    "requestPermissions": [
+      {
+        "name": "ohos.permission.INTERNET"
+      },
+      {
+        "name": "ohos.permission.GET_NETWORK_INFO"
+      }
+    ],
+    /**
+     * ⚠️ 白名单调试必须要这一项，否则 pushService.getToken() 报
+     * 1000900010 (Illegal application identity)。
+     *
+     * 取值位置：AppGallery Connect → 我的项目 → 项目设置 → 常规 →
+     *           应用 → OAuth 2.0 客户端 ID（凭据）里的 **Client ID**。
+     *
+     * 拿到后把下面的 PASTE_YOUR_CLIENT_ID_HERE 整个替换掉（不要加引号外的空格）。
+     * 注意：必须写死字符串，不能用 $string 引用资源。
+     */
+    "metadata": [
+      {
+        "name": "client_id",
+        "value": "PASTE_YOUR_CLIENT_ID_HERE"
+      }
+    ]
+  }
+}

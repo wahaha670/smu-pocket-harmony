@@ -1,0 +1,10 @@
+{
+  "modelVersion": "1.0.0",
+  "name": "smu-pocket-unittest",
+  "version": "1.0.0",
+  "description": "Unit tests for smu-pocket HarmonyOS",
+  "main": "",
+  "author": "",
+  "license": "GPL-3.0",
+  "dependencies": {}
+}

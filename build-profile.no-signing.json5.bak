@@ -1,0 +1,63 @@
+{
+  /*
+   * ⚠️ 这个文件**故意不含签名配置**。
+   *
+   * 原因有两个：
+   * 1. 签名配置里是**个人绝对路径**（C:\Users\<你的用户名>\...），
+   *    提交到公开仓库等于泄露用户名；
+   * 2. 里面的 `keyPassword` / `storePassword` 是个人签名口令，
+   *    更不应该公开。
+   *
+   * 另外鸿蒙的调试证书**绑定了开发者本人的设备 UDID**，
+   * 对别人毫无用处 —— 每个人都要用自己的账号签自己的设备。
+   *
+   * ## 需要装机时怎么办
+   *
+   * 跑一次下面这条命令，它会自动生成证书并把签名配置**写回本文件**：
+   *
+   *   devecocli auth login                                        # 先登录华为开发者账号
+   *   devecocli signature generate --product default              # 自动读设备 UDID 并写入
+   *
+   * （⚠️ 若本机开了代理，先清掉 HTTP_PROXY / HTTPS_PROXY，否则登录会报
+   *   ERR_TLS_CERT_ALTNAME_INVALID。详见 docs/安装到手机.md）
+   *
+   * 不装机（只编译、或用模拟器）时无需任何签名配置。
+   */
+  app: {
+    products: [
+      {
+        name: 'default',
+        compatibleSdkVersion: '5.0.0(12)',
+        runtimeOS: 'HarmonyOS',
+        buildOption: {
+          strictMode: {
+            caseSensitiveCheck: true,
+            useNormalizedOHMUrl: true,
+          },
+        },
+      },
+    ],
+    buildModeSet: [
+      {
+        name: 'debug',
+      },
+      {
+        name: 'release',
+      },
+    ],
+  },
+  modules: [
+    {
+      name: 'entry',
+      srcPath: './entry',
+      targets: [
+        {
+          name: 'default',
+          applyToProducts: [
+            'default',
+          ],
+        },
+      ],
+    },
+  ],
+}

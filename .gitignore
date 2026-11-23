@@ -1,0 +1,68 @@
+# ============================================================
+#  南医大口袋 · 鸿蒙版  .gitignore
+# ============================================================
+#
+# ⚠️ 改这个文件请用能正确处理 UTF-8 的编辑器/工具。
+#    用 PowerShell 的 `Get-Content -Raw` + `WriteAllText` 往返一次，
+#    中文注释会变乱码、还可能吞掉换行 —— 曾因此让下面的
+#    `signing/` 规则被并进注释行而**静默失效**，差点把个人签名材料提交出去。
+#
+
+# ---- 构建产物 ----
+build/
+.cxx/
+.hvigor/
+.build/
+*.hsp
+*.har
+
+# ---- HAP：只保留「未签名」的，签名包绝不能提交 ----
+#
+# ⚠️ 这里曾经写过 `!dist/*.hap`，那等于把**所有** dist 下的 HAP
+#    重新纳入版本控制 —— 包括 `*-signed.hap`。
+#    调试证书绑定了开发者本人设备的 UDID，提交出去等于公开签名身份，
+#    而且别人装了也跑不起来（UDID 不匹配）。
+#
+# 规则顺序很重要：先全排除，再**只**放行文件名以 UNSIGNED 结尾的。
+*.hap
+!dist/*-UNSIGNED.hap
+
+# ---- 依赖 ----
+node_modules/
+oh_modules/
+oh-package-lock.json5.bak
+
+# ---- 签名材料：绝对不能提交 ----
+#
+# 这些是个人调试证书，含密钥库与绑定了设备 UDID 的 Profile。
+# 提交出去等于公开自己的签名身份。
+# 调试材料由 `devecocli signature generate` 生成在 ~/.ohos/config/，
+# 不要复制进项目。
+signing/
+*.p12
+*.p7b
+*.cer
+*.csr
+*.pem
+*.jks
+*.keystore
+
+# 本机签名配置备份（含个人绝对路径与签名口令）
+build-profile.local-signing.json5.bak
+
+# ---- IDE / 本机配置 ----
+.idea/
+*.iml
+local.properties
+.DS_Store
+Thumbs.db
+
+# ---- 其它 ----
+*.log
+
+# ---- 开发过程截图（旧分辨率 / 调试图，不发布）----
+screenshots/_legacy/
+
+# ---- �ڲ�������¼�����Ự ID���������̣���������----
+_private/
+
