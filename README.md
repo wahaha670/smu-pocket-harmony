@@ -9,6 +9,11 @@
 ![api](https://img.shields.io/badge/API-26-F59B00)
 ![license](https://img.shields.io/badge/license-GPL--3.0-E0564A)
 
+> 💡 **想装未签名的鸿蒙包？** 本项目发布的是**未签名**的 HAP，无法直接安装。
+> 想快速在真机上装上体验，可以关注学习 GitHub 上的开源项目
+> **「小白调试助手」**——它能帮助你对未签名包做本地签名并安装。
+> 在 GitHub 搜索「小白调试助手」即可找到。
+
 ---
 
 ## 特性
