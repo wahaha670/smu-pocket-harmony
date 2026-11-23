@@ -2,6 +2,35 @@
 
 本项目遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [1.7.2] — 修正版本号显示，修复源码打包滞后
+
+### 问题一：应用内版本号长期显示错误
+
+`SettingsScreen.ets` 里写死 `const APP_VERSION = 'v1.1.1'`，
+而 `AppScope/app.json5` 的 `versionName` 也停留在 `1.1.1`。
+功能已迭代到 1.7.x，但装到手机上「设置」页显示的仍是 **v1.1.1**。
+
+**根因**：版本号分散在两处，都需要人手动同步 —— 两处都没跟上。
+
+**修复**：
+
+1. **版本号运行时读取**，不再写死。新建 `core/AppVersion.ets`，
+   用 `bundleManager.getBundleInfoForSelfSync()` 读 `BundleInfo.versionName`，
+   **单一数据源**——只有 `AppScope/app.json5` 一处需要维护，界面永远对得上。
+2. `AppScope/app.json5` 同步更新为 **1.7.2**（versionCode 1007002），
+   并加注释说明编码规则与历史遗留问题。
+3. `SettingsScreen` 的两处引用改为调用 `appVersionLabel()`。
+
+已验证：HAP 内 `module.json` 的 `versionName` 为 `1.7.2`。
+
+### 问题二：dist 里的包不是最新代码
+
+上次发布的 v1.7.1 HAP 是 11/22 编译的，而源码在 11/23 上午改过
+（`RootScreen.ets` 去掉了重复的 `refreshWidgets` 调用、
+`WidgetCard.ets` 的注释示意图脱敏）。**包落后于源码**。
+
+**修复**：重新编译，发布 v1.7.2。
+
 ## [1.7.1] — 修复：重新登录后桌面卡片不更新
 
 ### 问题

@@ -17,12 +17,11 @@ import {
 import { Course } from '../../core/Models';
 import { getPushToken, PushTokenResult } from '../../core/PushToken';
 import { FontSize } from '../../theme/Typography';
+// 版本号从包信息运行时读取，避免和 AppScope/app.json5 对不上
+import { appVersionLabel } from '../../core/AppVersion';
 
 /** 更新通知 / 问题反馈 QQ 群。点一下复制到剪贴板 */
 const QQ_GROUP: string = '1128162850';
-
-/** App 版本号 */
-const APP_VERSION: string = 'v1.1.1';
 
 @Component
 export struct SettingsScreen {
@@ -123,7 +122,7 @@ export struct SettingsScreen {
           this.DeveloperCard()
         }
 
-        Text(`南医大口袋 ${APP_VERSION} · 遵循 GPL-3.0 开源协议`)
+        Text(`南医大口袋 ${appVersionLabel()} · 遵循 GPL-3.0 开源协议`)
           .fontSize(FontSize.caption)
           .fontColor(Theme.colors(this.isDark).onSurfaceVariant)
           .opacity(0.7)
@@ -494,7 +493,7 @@ export struct SettingsScreen {
         .fontSize(FontSize.bodyStrong)
         .fontWeight(FontWeight.Bold)
         .fontColor(Theme.colors(this.isDark).onSurface)
-      Text(`南医大口袋 ${APP_VERSION}`)
+      Text(`南医大口袋 ${appVersionLabel()}`)
         .fontSize(FontSize.smallBody)
         .fontColor(Theme.colors(this.isDark).onSurface)
         .margin({ top: 6 })
